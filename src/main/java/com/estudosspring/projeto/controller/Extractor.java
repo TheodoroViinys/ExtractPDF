@@ -7,6 +7,7 @@ import com.estudosspring.projeto.process.OutputStreamDocument;
 import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.records.FileRecord;
 import com.estudosspring.projeto.services.PDFConverter;
+import com.estudosspring.projeto.utils.DocUtils;
 import com.estudosspring.projeto.utils.UrlUtils;
 
 import org.apache.commons.io.FilenameUtils;
@@ -14,8 +15,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,37 +38,30 @@ public class Extractor {
     private HttpRequest request;
     private HttpResponse<byte[]> response;
 
+    @GetMapping("/test")
+    public ResponseEntity<String> test(){
+        return ResponseEntity.ok("Everything is ok! 😁");
+    }
 
-    public List<ImagePropertyDTO> inspectType(FileRecord file) throws IOException {
+    @PostMapping(path = "/file/path", consumes = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_XML_VALUE})
+    public List<ImagePropertyDTO> inspectType(@RequestPart MultipartFile file) throws IOException {
 
         try {
 
-            if (UrlUtils.isAbsoluteUrl(file.path())) {
-                return getArchiveFromWeb(file.path());
-            }
-
-            File archive = new File(file.path());
-
-
-            String type = FilenameUtils.getExtension(file.path()).toUpperCase();
+            DOC_TYPE type = DocUtils.verifyTypeDoc(file.getBytes());
 
             switch (type) {
-                case "PDF" -> {
-                    return load(archive);
+                case PDF -> {
+                    return load(file.getBytes());
                 }
-                case "DOCX" -> {
-                    return convertToPDF(archive);
+                case DOCX -> {
+                    return PDFConverter.docxToPDF(file.getBytes());
 
                 }
                 default -> {
                     return null;
                 }
             }
-
-//            PDDocument doc = new  PDDocument();
-//            doc.save(new File(file.path()));
-//            PDFEngine engine = new PDFEngine(doc);
-//            return engine.getImagePropertyDTOs();
 
         } catch (Exception ex) {
             log.error("\n- The action could not be performed because: ", ex);
@@ -78,7 +74,7 @@ public class Extractor {
         return dtos;
     }
 
-    private List<ImagePropertyDTO> load(File file) throws IOException {
+    private List<ImagePropertyDTO> load(byte[] file) throws IOException {
         PDDocument doc = Loader.loadPDF(file);
         PDFEngine engine = new PDFEngine(doc);
         return engine.getImagePropertyDTOs();
@@ -89,10 +85,10 @@ public class Extractor {
         return engine.getImagePropertyDTOs();
     }
 
-
-    private List<ImagePropertyDTO> getArchiveFromWeb(String path) throws IOException, InterruptedException {
+    @PostMapping("/file/web")
+    private List<ImagePropertyDTO> getArchiveFromWeb(@RequestBody FileRecord file) throws IOException, InterruptedException {
         client = HttpClient.newHttpClient();
-        request = HttpRequest.newBuilder(URI.create(path)).GET().build();
+        request = HttpRequest.newBuilder(URI.create(file.path())).GET().build();
         response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
         List<ImagePropertyDTO> dtoList = new ArrayList<>();
@@ -100,7 +96,7 @@ public class Extractor {
         if (response.statusCode() == 200) {
 
 
-            DOC_TYPE type = verifyTypeDoc(response.body());
+            DOC_TYPE type = DocUtils.verifyTypeDoc(response.body());
 
             switch (type) {
                 case PDF -> {
@@ -119,19 +115,4 @@ public class Extractor {
         return dtoList;
     }
 
-    private DOC_TYPE verifyTypeDoc(byte[] body) {
-
-        if (body[0] == (byte) 0x25 && body[1] == (byte) 0x50 && body[2] == (byte) 0x44 && body[3] == (byte) 0x46) {
-            return DOC_TYPE.PDF;
-
-        } else if (body[0] == (byte) 0x50 && body[1] == (byte) 0x4B && body[2] == (byte) 0x03 && body[3] == (byte) 0x04) {
-            return DOC_TYPE.DOCX;
-
-        } else if (body[0] == (byte) 0xD0 && body[1] == (byte) 0xCF && body[2] == (byte) 0x11 && body[3] == (byte) 0xE0 && body[4] == (byte) 0xA1 && body[5] == (byte) 0xB1 && body[6] == (byte) 0x1A && body[7] == (byte) 0xE1) {
-            return DOC_TYPE.DOC;
-
-        } else {
-            return DOC_TYPE.DEFAULT;
-        }
-    }
 }
