@@ -8,9 +8,7 @@ import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.records.FileRecord;
 import com.estudosspring.projeto.services.PDFConverter;
 import com.estudosspring.projeto.utils.DocUtils;
-import com.estudosspring.projeto.utils.UrlUtils;
 
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.Loader;
@@ -43,11 +41,13 @@ public class Extractor {
         return ResponseEntity.ok("Everything is ok! 😁");
     }
 
-    @PostMapping(path = "/file/path", consumes = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_XML_VALUE})
-    public List<ImagePropertyDTO> inspectType(@RequestPart MultipartFile file) throws IOException {
+    @PostMapping(path = "/file/path", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public List<ImagePropertyDTO> inspectType(@RequestParam("file") MultipartFile file) throws IOException {
 
         try {
-
+            System.out.println("Arquivo recebido: " + file.getOriginalFilename());
+            System.out.println("Tipo: " + file.getContentType());
+            
             DOC_TYPE type = DocUtils.verifyTypeDoc(file.getBytes());
 
             switch (type) {
