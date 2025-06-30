@@ -36,6 +36,11 @@ public class Extractor {
     private HttpRequest request;
     private HttpResponse<byte[]> response;
 
+    @GetMapping("/docker")
+    public ResponseEntity<String> docker(){
+        return ResponseEntity.ok("Everything is ok! 🐋");
+    }
+
     @GetMapping("/test")
     public ResponseEntity<String> test(){
         return ResponseEntity.ok("Everything is ok! 😁");
