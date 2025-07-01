@@ -74,11 +74,6 @@ public class Extractor {
         return List.of();
     }
 
-    private List<ImagePropertyDTO> convertToPDF(File file) throws IOException {
-        List<ImagePropertyDTO> dtos = PDFConverter.docxToPDF(file);
-        return dtos;
-    }
-
     private List<ImagePropertyDTO> load(byte[] file) throws IOException {
         PDDocument doc = Loader.loadPDF(file);
         PDFEngine engine = new PDFEngine(doc);
