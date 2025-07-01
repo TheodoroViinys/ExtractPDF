@@ -14,8 +14,8 @@ import java.util.List;
 @RequestMapping("/search")
 public class PDFReader {
 
-    @GetMapping(path = "/archiver/{word}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity findFileByWord(@PathVariable String word, @RequestParam("files") List<MultipartFile> files){
+    @GetMapping(path = "/archiver/word", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity findFileByWord(@RequestParam("word") String word, @RequestParam("files") List<MultipartFile> files){
 
         try{
             List<String> founded = new ArrayList<>();
@@ -25,7 +25,7 @@ public class PDFReader {
                 PDFTextStripper stripper = new PDFTextStripper();
 
                 if (stripper.getText(doc).toLowerCase().contains(word.toLowerCase())){
-                    founded.add(file.getName());
+                    founded.add(file.getOriginalFilename());
                 }
             }
 
