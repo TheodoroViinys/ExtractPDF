@@ -3,23 +3,27 @@ package com.estudosspring.projeto.controller;
 
 import com.estudosspring.projeto.dto.ImagePropertyDTO;
 import com.estudosspring.projeto.enums.DOC_TYPE;
+import com.estudosspring.projeto.exceptions.InvalidFormatException;
 import com.estudosspring.projeto.process.OutputStreamDocument;
 import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.records.FileRecord;
 import com.estudosspring.projeto.services.PDFConverter;
 import com.estudosspring.projeto.utils.DocUtils;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFPictureData;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -60,11 +64,11 @@ public class Extractor {
                     return load(file.getBytes());
                 }
                 case DOCX -> {
-                    return PDFConverter.docxToPDF(file.getBytes());
+                    return loadDocx(file.getInputStream());
 
                 }
                 default -> {
-                    return null;
+                    throw new InvalidFormatException();
                 }
             }
 
@@ -74,9 +78,17 @@ public class Extractor {
         return List.of();
     }
 
-    private List<ImagePropertyDTO> convertToPDF(File file) throws IOException {
-        List<ImagePropertyDTO> dtos = PDFConverter.docxToPDF(file);
-        return dtos;
+    private List<ImagePropertyDTO> loadDocx(InputStream stream) throws IOException {
+        List<XWPFPictureData> allPictures = new XWPFDocument(stream).getAllPictures();
+
+        List<ImagePropertyDTO> images = new ArrayList<>();
+
+        for (XWPFPictureData picture : allPictures){
+            Image image = new ImageIcon(picture.getData()).getImage();
+            images.add(new ImagePropertyDTO(image.getWidth(null), image.getHeight(null), picture.getData()));
+        }
+
+        return images;
     }
 
     private List<ImagePropertyDTO> load(byte[] file) throws IOException {
