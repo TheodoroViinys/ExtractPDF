@@ -9,6 +9,7 @@ import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.records.FileRecord;
 import com.estudosspring.projeto.services.PDFConverter;
 import com.estudosspring.projeto.utils.DocUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,9 +48,23 @@ public class Extractor {
     }
 
     @GetMapping("/go")
-    public void go(HttpServletResponse req){
+    public void go(HttpServletResponse res, HttpServletRequest req){
         try {
-            req.sendRedirect("https://youtu.be/dQw4w9WgXcQ?si=d_h0qpbTxXMjZ7Z4");
+            String sys = req.getHeader("User-Agent");
+
+            if (sys.contains("linux") || sys.contains("Linux")){
+                res.sendRedirect("https://youtu.be/dQw4w9WgXcQ?si=d_h0qpbTxXMjZ7Z4");
+
+            } else if (sys.contains("windows") || sys.contains("Windows")) {
+                res.sendRedirect("https://youtu.be/P6antjcBFZ4?si=6K92uF4O5oP3mNj_");
+
+            }else if (sys.contains("mac") || sys.contains("Mac") || sys.contains("MacOs")){
+                res.sendRedirect("https://youtu.be/kqKDnZtOFYk?si=NAMN5LEg--EMzq9s");
+
+            }else{
+                res.sendRedirect("https://youtube.com/shorts/pwVprFivVfA?si=z9JB2J7a03_VrQY7");
+
+            }
         } catch (Exception e) {
             System.out.println(e);
         }
