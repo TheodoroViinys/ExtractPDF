@@ -40,11 +40,6 @@ public class Extractor {
     private HttpRequest request;
     private HttpResponse<byte[]> response;
 
-    @GetMapping("/docker")
-    public ResponseEntity<String> docker(){
-        return ResponseEntity.ok("Everything is ok! 🐋");
-    }
-
     @GetMapping("/test")
     public ResponseEntity<String> test(){
         return ResponseEntity.ok("Everything is ok! 😁");
@@ -93,11 +88,6 @@ public class Extractor {
 
     private List<ImagePropertyDTO> load(byte[] file) throws IOException {
         PDDocument doc = Loader.loadPDF(file);
-        PDFEngine engine = new PDFEngine(doc);
-        return engine.getImagePropertyDTOs();
-    }
-
-    private List<ImagePropertyDTO> load(PDDocument doc) throws IOException {
         PDFEngine engine = new PDFEngine(doc);
         return engine.getImagePropertyDTOs();
     }
