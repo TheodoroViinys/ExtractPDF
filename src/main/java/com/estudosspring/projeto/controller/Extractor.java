@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -118,16 +119,16 @@ public class Extractor {
     }
 
     @PostMapping("/file/web")
-    private List<ImagePropertyDTO> getArchiveFromWeb(@RequestBody FileRecord file) throws IOException, InterruptedException {
+    private List<ImagePropertyDTO> getArchiveFromWeb(@RequestParam("file") String file) throws IOException, InterruptedException {
         client = HttpClient.newHttpClient();
-        request = HttpRequest.newBuilder(URI.create(file.path())).GET().build();
+        request = HttpRequest.newBuilder(URI.create(file)).GET().build();
         response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
         List<ImagePropertyDTO> dtoList = new ArrayList<>();
 
         if (response.statusCode() == 200) {
 
-
+            //testar doc também https://revistauox.paginas.ufsc.br/files/2013/05/Modelo-de-artigo-para-a-Revista-uox.doc
             DOC_TYPE type = DocUtils.verifyTypeDoc(response.body());
 
             switch (type) {
@@ -137,7 +138,7 @@ public class Extractor {
                     dtoList = outputStreamDocument.getImagePropertyDTOS();
                 }
                 case DOCX -> {
-                    dtoList = PDFConverter.docxToPDF(response.body());
+                    dtoList = loadDocx(new ByteArrayInputStream(response.body()));
                 }
             }
 
