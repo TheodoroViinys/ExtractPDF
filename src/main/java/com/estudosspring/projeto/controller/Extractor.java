@@ -9,6 +9,7 @@ import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.records.FileRecord;
 import com.estudosspring.projeto.services.PDFConverter;
 import com.estudosspring.projeto.utils.DocUtils;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.Loader;
@@ -32,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/extrator")
+@RequestMapping("/extractor")
 public class Extractor {
 
     private static final Logger log = LogManager.getLogger(Extractor.class);
@@ -41,8 +42,17 @@ public class Extractor {
     private HttpResponse<byte[]> response;
 
     @GetMapping("/test")
-    public ResponseEntity<String> test(){
+    public ResponseEntity<Object> test(){
         return ResponseEntity.ok("Everything is ok! 😁");
+    }
+
+    @GetMapping("/go")
+    public void go(HttpServletResponse req){
+        try {
+            req.sendRedirect("https://youtu.be/dQw4w9WgXcQ?si=d_h0qpbTxXMjZ7Z4");
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
     @PostMapping(path = "/file/path", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
