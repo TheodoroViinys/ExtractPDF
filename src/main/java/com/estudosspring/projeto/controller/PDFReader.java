@@ -2,11 +2,12 @@ package com.estudosspring.projeto.controller;
 
 import com.estudosspring.projeto.enums.DOC_TYPE;
 import com.estudosspring.projeto.exceptions.InvalidFormatException;
-import com.estudosspring.projeto.services.PDFConverter;
-import lombok.val;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/search")
@@ -30,18 +31,31 @@ public class PDFReader {
 
             for (MultipartFile file : files) {
 
-                if (Objects.requireNonNull(file.getContentType()).contains(DOC_TYPE.PDF.name().toLowerCase())) {
-                    PDDocument doc = Loader.loadPDF(file.getBytes());
-                    PDFTextStripper stripper = new PDFTextStripper();
+                String type = FilenameUtils.getExtension(file.getOriginalFilename()).toUpperCase();
 
-                    if (stripper.getText(doc).toLowerCase().contains(word.toLowerCase())) {
-                        founded.add(file.getOriginalFilename());
+                switch (DOC_TYPE.valueOf(type)){
+
+                    case PDF -> {
+                        PDDocument doc = Loader.loadPDF(file.getBytes());
+                        PDFTextStripper stripper = new PDFTextStripper();
+
+                        if (stripper.getText(doc).toLowerCase().contains(word.toLowerCase())) {
+                            founded.add(file.getOriginalFilename());
+                        }
                     }
 
-                } else if (Objects.requireNonNull(file.getContentType()).contains(DOC_TYPE.DOCX.name().toLowerCase())) {
-                    val imagePropertyDTOS = PDFConverter.docxToPDF(file.getBytes());
-                } else{
-                    throw new InvalidFormatException();
+                    case DOCX -> {
+                        XWPFDocument doc = new XWPFDocument(file.getInputStream());
+                        String text = doc.getParagraphs().stream().map(XWPFParagraph::getText).collect(Collectors.joining("\n"));
+
+                        if (text.toLowerCase().contains(word.toLowerCase())){
+                            founded.add(file.getOriginalFilename());
+                        }
+                    }
+
+                    default -> {
+                        throw new InvalidFormatException();
+                    }
                 }
 
             }
