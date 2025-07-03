@@ -6,8 +6,6 @@ import com.estudosspring.projeto.enums.DOC_TYPE;
 import com.estudosspring.projeto.exceptions.InvalidFormatException;
 import com.estudosspring.projeto.process.OutputStreamDocument;
 import com.estudosspring.projeto.process.PDFEngine;
-import com.estudosspring.projeto.records.FileRecord;
-import com.estudosspring.projeto.services.PDFConverter;
 import com.estudosspring.projeto.utils.DocUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,15 +22,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/extractor")
@@ -44,25 +42,31 @@ public class Extractor {
     private HttpResponse<byte[]> response;
 
     @GetMapping("/test")
-    public ResponseEntity<Object> test(){
+    public ResponseEntity<Object> test() {
         return ResponseEntity.ok("Everything is ok! 😁");
     }
 
+    private void doRequest(String file) throws IOException, InterruptedException {
+        client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();
+        request = HttpRequest.newBuilder(URI.create(file)).GET().build();
+        response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+    }
+
     @GetMapping("/go")
-    public void go(HttpServletResponse res, HttpServletRequest req){
+    public void go(HttpServletResponse res, HttpServletRequest req) {
         try {
             String sys = req.getHeader("User-Agent");
 
-            if (sys.contains("linux") || sys.contains("Linux")){
+            if (sys.contains("linux") || sys.contains("Linux")) {
                 res.sendRedirect("https://youtu.be/dQw4w9WgXcQ?si=d_h0qpbTxXMjZ7Z4");
 
             } else if (sys.contains("windows") || sys.contains("Windows")) {
                 res.sendRedirect("https://youtu.be/P6antjcBFZ4?si=6K92uF4O5oP3mNj_");
 
-            }else if (sys.contains("mac") || sys.contains("Mac") || sys.contains("MacOs")){
+            } else if (sys.contains("mac") || sys.contains("Mac") || sys.contains("MacOs")) {
                 res.sendRedirect("https://youtu.be/kqKDnZtOFYk?si=NAMN5LEg--EMzq9s");
 
-            }else{
+            } else {
                 res.sendRedirect("https://youtube.com/shorts/pwVprFivVfA?si=z9JB2J7a03_VrQY7");
 
             }
@@ -75,9 +79,7 @@ public class Extractor {
     public List<ImagePropertyDTO> inspectType(@RequestParam("file") MultipartFile file) throws IOException {
 
         try {
-            System.out.println("Arquivo recebido: " + file.getOriginalFilename());
-            System.out.println("Tipo: " + file.getContentType());
-            
+
             DOC_TYPE type = DocUtils.verifyTypeDoc(file.getBytes());
 
             switch (type) {
@@ -104,7 +106,7 @@ public class Extractor {
 
         List<ImagePropertyDTO> images = new ArrayList<>();
 
-        for (XWPFPictureData picture : allPictures){
+        for (XWPFPictureData picture : allPictures) {
             Image image = new ImageIcon(picture.getData()).getImage();
             images.add(new ImagePropertyDTO(image.getWidth(null), image.getHeight(null), picture.getData()));
         }
@@ -120,9 +122,16 @@ public class Extractor {
 
     @PostMapping("/file/web")
     private List<ImagePropertyDTO> getArchiveFromWeb(@RequestParam("file") String file) throws IOException, InterruptedException {
-        client = HttpClient.newHttpClient();
-        request = HttpRequest.newBuilder(URI.create(file)).GET().build();
-        response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+        Matcher matcher = Pattern.compile("https://docs.google.com/document/d/([a-zA-Z0-9_-]+)").matcher(file);
+
+        boolean isGoogleDoc = matcher.find();
+
+        if (isGoogleDoc){
+            file = matcher.group() + "/export?format=pdf";
+        }
+
+        doRequest(file);
 
         List<ImagePropertyDTO> dtoList = new ArrayList<>();
 
@@ -140,8 +149,16 @@ public class Extractor {
                 case DOCX -> {
                     dtoList = loadDocx(new ByteArrayInputStream(response.body()));
                 }
-            }
 
+                case DOC -> {
+
+                }
+
+                case DEFAULT -> {
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(response.body())));
+                    bufferedReader.readLine();
+                }
+            }
 
         }
 
