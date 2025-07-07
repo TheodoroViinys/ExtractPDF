@@ -15,6 +15,12 @@ public class DocUtils {
 		} else if (body[0] == (byte) 0xD0 && body[1] == (byte) 0xCF && body[2] == (byte) 0x11 && body[3] == (byte) 0xE0 && body[4] == (byte) 0xA1 && body[5] == (byte) 0xB1 && body[6] == (byte) 0x1A && body[7] == (byte) 0xE1) {
 			return DOC_TYPE.DOC;
 
+		} else if (new String(body).contains("PNG")) {
+			return DOC_TYPE.PNG;
+
+		} else if (new String(body).contains("<!DOCTYPE html>")) {
+			return DOC_TYPE.HTML;
+
 		} else {
 			return DOC_TYPE.DEFAULT;
 		}
