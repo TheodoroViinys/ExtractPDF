@@ -36,8 +36,12 @@
 			<name>E-Iceblue Public</name>
 			<url>https://repo.e-iceblue.com/nexus/content/groups/public/</url>
 		</repository>
+		<repository>
+			<id>AsposeJavaAPI</id>
+			<name>Aspose Java API</name>
+			<url>https://releases.aspose.com/java/repo/</url>
+		</repository>
 	</repositories>
-
 
 	<dependencies>
 		<dependency>
@@ -87,6 +91,12 @@
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.4.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.aspose</groupId>
+			<artifactId>aspose-words</artifactId>
+			<version>25.6</version>
+			<classifier>jdk17</classifier>
 		</dependency>
 	</dependencies>
 

@@ -1,6 +1,8 @@
 package com.estudosspring.projeto.controller;
 
 
+import com.aspose.words.Document;
+import com.aspose.words.DocumentVisitor;
 import com.estudosspring.projeto.dto.ImagePropertyDTO;
 import com.estudosspring.projeto.enums.DOC_TYPE;
 import com.estudosspring.projeto.exceptions.InvalidFormatException;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 @RestController
 @RequestMapping("/extractor")
@@ -90,6 +93,11 @@ public class Extractor {
                     return loadDocx(file.getInputStream());
 
                 }
+
+                case EPUB -> {
+                    return loadEPub(file.getInputStream());
+                }
+
                 default -> {
                     throw new InvalidFormatException();
                 }
@@ -99,6 +107,11 @@ public class Extractor {
             log.error("\n- The action could not be performed because: ", ex);
         }
         return List.of();
+    }
+
+    private List<ImagePropertyDTO> loadEPub(InputStream inputStream) throws Exception {
+        Document nodes = new Document(inputStream);
+        return null;
     }
 
     private List<ImagePropertyDTO> loadDocx(InputStream stream) throws IOException {
@@ -150,7 +163,7 @@ public class Extractor {
                     dtoList = loadDocx(new ByteArrayInputStream(response.body()));
                 }
 
-                case DOC -> {
+                case EPUB -> {
 
                 }
 
