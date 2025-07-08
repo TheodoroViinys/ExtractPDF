@@ -1,12 +1,15 @@
 package com.estudosspring.projeto.controller;
 
 
+import com.aspose.words.*;
+import com.aspose.words.Shape;
 import com.estudosspring.projeto.dto.ImagePropertyDTO;
 import com.estudosspring.projeto.enums.DOC_TYPE;
 import com.estudosspring.projeto.exceptions.InvalidFormatException;
 import com.estudosspring.projeto.process.OutputStreamDocument;
 import com.estudosspring.projeto.process.PDFEngine;
 import com.estudosspring.projeto.utils.DocUtils;
+import com.estudosspring.projeto.utils.UrlUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
@@ -29,8 +32,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 
 @RestController
 @RequestMapping("/extractor")
@@ -80,7 +82,7 @@ public class Extractor {
 
         try {
 
-            DOC_TYPE type = DocUtils.verifyTypeDoc(file.getBytes());
+            DOC_TYPE type = DocUtils.verifyTypeDoc(file.getOriginalFilename());
 
             switch (type) {
                 case PDF -> {
@@ -90,6 +92,11 @@ public class Extractor {
                     return loadDocx(file.getInputStream());
 
                 }
+
+                case EPUB -> {
+                    return loadEPub(file.getInputStream());
+                }
+
                 default -> {
                     throw new InvalidFormatException();
                 }
@@ -99,6 +106,28 @@ public class Extractor {
             log.error("\n- The action could not be performed because: ", ex);
         }
         return List.of();
+    }
+
+    private List<ImagePropertyDTO> loadEPub(InputStream inputStream) throws Exception {
+        Document nodes = new Document(inputStream);
+
+        NodeCollection<Shape> childNodes = nodes.getChildNodes(NodeType.SHAPE, true);
+        List<ImagePropertyDTO> images = new ArrayList<>();
+
+        for (Shape shape : childNodes) {
+            if (shape.hasImage()) {
+                ImageData imageData = shape.getImageData();
+                images.add(
+                        new ImagePropertyDTO(
+                                imageData.getImageSize().getWidthPixels(),
+                                imageData.getImageSize().getHeightPixels(),
+                                imageData.toByteArray()
+                        )
+                );
+            }
+        }
+
+        return images;
     }
 
     private List<ImagePropertyDTO> loadDocx(InputStream stream) throws IOException {
@@ -121,15 +150,7 @@ public class Extractor {
     }
 
     @PostMapping("/file/web")
-    private List<ImagePropertyDTO> getArchiveFromWeb(@RequestParam("file") String file) throws IOException, InterruptedException {
-
-        Matcher matcher = Pattern.compile("https://docs.google.com/document/d/([a-zA-Z0-9_-]+)").matcher(file);
-
-        boolean isGoogleDoc = matcher.find();
-
-        if (isGoogleDoc){
-            file = matcher.group() + "/export?format=pdf";
-        }
+    private List<ImagePropertyDTO> getArchiveFromWeb(@RequestParam("file") String file) throws Exception {
 
         doRequest(file);
 
@@ -138,25 +159,33 @@ public class Extractor {
         if (response.statusCode() == 200) {
 
             //testar doc também https://revistauox.paginas.ufsc.br/files/2013/05/Modelo-de-artigo-para-a-Revista-uox.doc
+
             DOC_TYPE type = DocUtils.verifyTypeDoc(response.body());
 
             switch (type) {
                 case PDF -> {
                     OutputStreamDocument outputStreamDocument = new OutputStreamDocument();
                     outputStreamDocument.write(response.body());
+
                     dtoList = outputStreamDocument.getImagePropertyDTOS();
                 }
                 case DOCX -> {
                     dtoList = loadDocx(new ByteArrayInputStream(response.body()));
                 }
 
-                case DOC -> {
+                case EPUB -> {
+                    dtoList = loadEPub(new ByteArrayInputStream(response.body()));
+                }
+                case HTML -> {
+                    String url = UrlUtils.getGoogleDocUrlDownload(file, DOC_TYPE.PDF);
 
+                    if (url != null){
+                       dtoList = getArchiveFromWeb(url);
+                    }
                 }
 
                 case DEFAULT -> {
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(response.body())));
-                    bufferedReader.readLine();
+                    throw new InvalidFormatException();
                 }
             }
 
