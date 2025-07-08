@@ -185,8 +185,7 @@ public class Extractor {
                 }
 
                 case DEFAULT -> {
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(response.body())));
-                    bufferedReader.readLine();
+                    throw new InvalidFormatException();
                 }
             }
 
