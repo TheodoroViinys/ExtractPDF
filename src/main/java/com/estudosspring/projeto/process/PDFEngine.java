@@ -1,6 +1,8 @@
 package com.estudosspring.projeto.process;
 
 import com.estudosspring.projeto.dto.ImagePropertyDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.stream.Streams;
 import org.apache.pdfbox.contentstream.PDFStreamEngine;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSBase;
@@ -10,33 +12,37 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PDFEngine extends PDFStreamEngine {
+@Slf4j
+public abstract class PDFEngine extends PDFStreamEngine {
 
-    private List<BufferedImage> images = new ArrayList<>();
-    private List<ImagePropertyDTO> imagePropertyDTOs = new ArrayList<>();
-    private PDDocument document;
 
-    public PDFEngine(PDDocument document) throws IOException {
-        this.document = document;
+    private List<ImagePropertyDTO> imagePropertyDTOs;
+
+    protected void processPDF(PDDocument document) throws IOException {
+        ImageIO.setUseCache(false);
+        imagePropertyDTOs = new ArrayList<>();
         processDocument(document);
         document.close();
     }
 
     private void processDocument(PDDocument document) throws IOException {
-        for(PDPage page : document.getPages()){
-            processPage(page);
-        }
+        Streams.of(document.getPages()).parallel().forEach(p -> {
+            try {
+                processPage(p);
+            } catch (Exception e) {
+                log.error(e.getMessage());
+            }
+        });
+
     }
 
     @Override
     protected void processOperator(Operator operator, List<COSBase> operands) throws IOException {
-
         for (var base : operands) {
             if (base instanceof COSName name && operator.getName().equals("Do")) {
                 PDImageXObject thumbnail = PDImageXObject.createThumbnail(getResources().getXObject(name).getCOSObject());
@@ -44,7 +50,8 @@ public class PDFEngine extends PDFStreamEngine {
                     ImageIO.write(thumbnail.getImage(), "PNG", baos);
                     byte[] imageBytes = baos.toByteArray();
                     imagePropertyDTOs.add(new ImagePropertyDTO(thumbnail.getWidth(), thumbnail.getHeight(), imageBytes));
-                };
+                }
+                ;
             }
         }
 
@@ -53,11 +60,8 @@ public class PDFEngine extends PDFStreamEngine {
         }
     }
 
-    public List<BufferedImage> getImages() {
-        return images;
-    }
 
-    public List<ImagePropertyDTO> getImagePropertyDTOs() {
+    protected List<ImagePropertyDTO> getImagePropertyDTOs() {
         return imagePropertyDTOs;
     }
 }
