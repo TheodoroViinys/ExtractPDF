@@ -5,27 +5,54 @@ import com.aspose.words.NodeCollection;
 import com.aspose.words.NodeType;
 import com.aspose.words.Shape;
 import com.estudosspring.projeto.dto.ImagePropertyDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFPictureData;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class DocumentEngine extends PDFEngine {
+public class DocumentEngine  {
 
-    public List<ImagePropertyDTO> loadPDF(InputStream file) throws Exception {
-        PDDocument document = Loader.loadPDF(file.readAllBytes());
-        processPDF(document);
-        document.close();
-        return getImagePropertyDTOs();
+    @Autowired
+    private ObjectMapper mapper;
+
+    public DocumentEngine() {
+        ImageIO.setUseCache(true);
+    }
+
+    public String loadPDF(InputStream file) throws Exception {
+        PDDocument doc = Loader.loadPDF(file.readAllBytes());
+        List<ImagePropertyDTO> images = new ArrayList<>();
+        for (PDPage page : doc.getPages()) {
+
+            for (COSName xObjectName : page.getResources().getXObjectNames()) {
+                if (page.getResources().getXObject(xObjectName) instanceof PDImageXObject image){
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    ImageIO.write(image.getImage(), "png", out);
+                    images.add(new ImagePropertyDTO(image.getWidth(), image.getHeight(), out.toByteArray() ));
+
+                    out.close();
+                }
+            }
+        }
+
+
+        return mapper.valueToTree(images).toPrettyString();
     }
 
     public List<ImagePropertyDTO> loadDOCX(InputStream stream) throws IOException {

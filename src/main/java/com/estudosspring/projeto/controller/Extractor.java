@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
 
 
 @RestController
@@ -36,13 +37,8 @@ public class Extractor {
     @Autowired
     private ObjectNode node;
 
-    @GetMapping("/test")
-    public ResponseEntity<Object> test() {
-        return ResponseEntity.ok("Everything is ok! 😁");
-    }
-
     @PostMapping(path = "/file/path", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<?> getArchive(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> getFileImage(@RequestParam("file") MultipartFile file) {
 
         try {
 
@@ -83,7 +79,7 @@ public class Extractor {
     }
 
     @PostMapping("/file/web")
-    public ResponseEntity<?> getArchiveFromWeb(@RequestParam("file") String file) {
+    public ResponseEntity<?> getFileImageFromWeb(@RequestParam("file") String file) {
 
         try {
 
@@ -109,7 +105,7 @@ public class Extractor {
                         String url = UrlUtils.getGoogleDocUrlDownload(file, DOC_TYPE.PDF);
 
                         if (url != null) {
-                            return getArchiveFromWeb(url);
+                            return getFileImageFromWeb(url);
                         }
                     }
 
@@ -131,6 +127,19 @@ public class Extractor {
         node.put("description", "file not found");
 
         return ResponseEntity.internalServerError().body(node);
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<Object> test() {
+        return ResponseEntity.ok("Everything is ok! 😁");
+    }
+
+    @PostMapping("/teste/process")
+    public ResponseEntity<Boolean> testProcess(@RequestParam("file") MultipartFile file) throws IOException {
+        System.out.println("UP: " + LocalDateTime.now());
+        //Here is where I test some implementation ideas
+        System.out.printf("\nDOWN: %s", LocalDateTime.now());
+        return ResponseEntity.ok().body(true);
     }
 
     private void doRequest(String file) throws IOException, InterruptedException {
